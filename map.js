@@ -26,4 +26,4 @@ function renderMap(rows){
  $('mapLegend').innerHTML='<span>0</span><i style="background:#e6ece9"></i><i style="background:#b9dacb"></i><i style="background:#6eaa90"></i><i style="background:#1f7a59"></i><span>'+max+' projetos</span>';
 }
 window.updateMap=rows=>renderMap(rows);
-fetch('brazil-states.geo.json').then(r=>r.json()).then(data=>{MAP_DATA=data;renderMap(MAP_ROWS)}).catch(()=>$('brazilMap').innerHTML='<p>Não foi possível carregar a malha estadual.</p>');
+fetch('brazil-states.geo.json?v=8').then(r=>r.json()).then(data=>{MAP_DATA=data;renderMap(MAP_ROWS)}).catch(()=>$('brazilMap').innerHTML='<p>Não foi possível carregar a malha estadual.</p>');
