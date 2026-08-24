@@ -1,8 +1,10 @@
 let MAP_DATA=null,MAP_ROWS=PROJECTS;
 const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function projectStates(p){
- const raw=norm(p.state);if(!raw||raw==='nao informado')return[];
+ const raw=norm(p.idesamState||p.state);if(!raw||raw==='nao informado')return[];
  const names=['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo','Goiás','Maranhão','Mato Grosso do Sul','Mato Grosso','Minas Gerais','Pará','Paraíba','Paraná','Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima','Santa Catarina','São Paulo','Sergipe','Tocantins'];
+ const codes={ac:'Acre',al:'Alagoas',ap:'Amapá',am:'Amazonas',ba:'Bahia',ce:'Ceará',df:'Distrito Federal',es:'Espírito Santo',go:'Goiás',ma:'Maranhão',mt:'Mato Grosso',ms:'Mato Grosso do Sul',mg:'Minas Gerais',pa:'Pará',pb:'Paraíba',pr:'Paraná',pe:'Pernambuco',pi:'Piauí',rj:'Rio de Janeiro',rn:'Rio Grande do Norte',rs:'Rio Grande do Sul',ro:'Rondônia',rr:'Roraima',sc:'Santa Catarina',sp:'São Paulo',se:'Sergipe',to:'Tocantins'};
+ if(codes[raw.trim()])return[codes[raw.trim()]];
  const found=[];
  names.forEach(name=>{const n=norm(name);let test=raw;if(name==='Mato Grosso')test=raw.replace(/mato grosso do sul/g,'');const re=new RegExp('(^|[^a-z])'+n.replace(/ /g,'\\s+')+'([^a-z]|$)');if(re.test(test))found.push(name)});
  if(raw.trim()==='ms'&&!found.includes('Mato Grosso do Sul'))found.push('Mato Grosso do Sul');
@@ -26,4 +28,4 @@ function renderMap(rows){
  $('mapLegend').innerHTML='<span>0</span><i style="background:#e6ece9"></i><i style="background:#b9dacb"></i><i style="background:#6eaa90"></i><i style="background:#1f7a59"></i><span>'+max+' projetos</span>';
 }
 window.updateMap=rows=>renderMap(rows);
-fetch('brazil-states.geo.json?v=8').then(r=>r.json()).then(data=>{MAP_DATA=data;renderMap(MAP_ROWS)}).catch(()=>$('brazilMap').innerHTML='<p>Não foi possível carregar a malha estadual.</p>');
+fetch('brazil-states.geo.json?v=9').then(r=>r.json()).then(data=>{MAP_DATA=data;renderMap(MAP_ROWS)}).catch(()=>$('brazilMap').innerHTML='<p>Não foi possível carregar a malha estadual.</p>');
