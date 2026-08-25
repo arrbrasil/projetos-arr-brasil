@@ -35,14 +35,14 @@ function renderMap(rows){
 async function ensureDetails(){
  if(DETAIL_DATA)return DETAIL_DATA;if(DETAIL_PROMISE)return DETAIL_PROMISE;
  const status=$('mapStatus');if(status)status.textContent='Carregando e preparando os limites completos…';
- DETAIL_PROMISE=fetch('verra-projects-detailed.geo.json.gz?v=17').then(async r=>{if(!r.ok)throw new Error('Falha ao carregar limites');if(typeof DecompressionStream!=='function')throw new Error('Navegador sem descompactação gzip');const stream=r.body.pipeThrough(new DecompressionStream('gzip'));return new Response(stream).json()}).then(data=>{DETAIL_DATA=data;renderMap(MAP_ROWS);return data}).catch(e=>{DETAIL_PROMISE=null;const s=$('mapStatus');if(s)s.textContent='Não foi possível carregar os limites detalhados.';throw e});
+ DETAIL_PROMISE=fetch('verra-projects-detailed.geo.json.gz?v=18').then(async r=>{if(!r.ok)throw new Error('Falha ao carregar limites');if(typeof DecompressionStream!=='function')throw new Error('Navegador sem descompactação gzip');const stream=r.body.pipeThrough(new DecompressionStream('gzip'));return new Response(stream).json()}).then(data=>{DETAIL_DATA=data;return data}).catch(e=>{DETAIL_PROMISE=null;const s=$('mapStatus');if(s)s.textContent='Não foi possível carregar os limites detalhados.';throw e});
  return DETAIL_PROMISE;
 }
 function attachZoom(mapEl,W,H){
  const svg=mapEl.querySelector('svg'),viewport=mapEl.querySelector('#mapViewport');if(!svg||!viewport)return;
  const update=()=>viewport.setAttribute('transform','translate('+MAP_VIEW.x+' '+MAP_VIEW.y+') scale('+MAP_VIEW.scale+')');
- const zoomAt=async(factor,cx=W/2,cy=H/2)=>{try{await ensureDetails()}catch(e){return}const old=MAP_VIEW.scale,next=Math.max(1,Math.min(32,old*factor));MAP_VIEW.x=cx-(cx-MAP_VIEW.x)*(next/old);MAP_VIEW.y=cy-(cy-MAP_VIEW.y)*(next/old);MAP_VIEW.scale=next;update()};
- $('mapDetail').onclick=()=>ensureDetails();$('mapZoomIn').onclick=()=>zoomAt(1.7);$('mapZoomOut').onclick=()=>zoomAt(1/1.7);$('mapReset').onclick=()=>{MAP_VIEW.scale=1;MAP_VIEW.x=0;MAP_VIEW.y=0;update()};
+ const zoomAt=async(factor,cx=W/2,cy=H/2)=>{try{await ensureDetails()}catch(e){return}const old=MAP_VIEW.scale,next=Math.max(1,Math.min(32,old*factor));MAP_VIEW.x=cx-(cx-MAP_VIEW.x)*(next/old);MAP_VIEW.y=cy-(cy-MAP_VIEW.y)*(next/old);MAP_VIEW.scale=next;renderMap(MAP_ROWS)};
+ $('mapDetail').onclick=async()=>{try{await ensureDetails();renderMap(MAP_ROWS)}catch(e){}};$('mapZoomIn').onclick=()=>zoomAt(1.7);$('mapZoomOut').onclick=()=>zoomAt(1/1.7);$('mapReset').onclick=()=>{MAP_VIEW.scale=1;MAP_VIEW.x=0;MAP_VIEW.y=0;update()};
  svg.addEventListener('wheel',e=>{e.preventDefault();const r=svg.getBoundingClientRect(),cx=(e.clientX-r.left)/r.width*W,cy=(e.clientY-r.top)/r.height*H;zoomAt(e.deltaY<0?1.35:1/1.35,cx,cy)},{passive:false});
  let drag=null,moved=false;svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:MAP_VIEW.x,oy:MAP_VIEW.y};moved=false;svg.setPointerCapture(e.pointerId)});svg.addEventListener('pointermove',e=>{if(!drag||MAP_VIEW.scale===1)return;const r=svg.getBoundingClientRect(),dx=(e.clientX-drag.x)/r.width*W,dy=(e.clientY-drag.y)/r.height*H;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;MAP_VIEW.x=drag.ox+dx;MAP_VIEW.y=drag.oy+dy;update()});svg.addEventListener('pointerup',()=>{drag=null});svg.addEventListener('pointercancel',()=>{drag=null});
 }
