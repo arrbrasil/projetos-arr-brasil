@@ -1,4 +1,5 @@
-let MAP_DATA=null,KML_DATA=null,MAP_ROWS=PROJECTS;
+let MAP_DATA=null,KML_DATA=null,DETAIL_DATA=null,DETAIL_PROMISE=null,MAP_ROWS=PROJECTS;
+const MAP_VIEW={scale:1,x:0,y:0};
 const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function projectStates(p){
  const raw=norm(p.idesamState||p.state);if(!raw||raw==='nao informado')return[];
@@ -22,13 +23,28 @@ function renderMap(rows){
  const max=Math.max(...Object.values(counts),1),color=n=>{if(!n)return'#e6ece9';const t=.2+.8*n/max,a=[231,243,237],b=[31,122,89];return'rgb('+a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')+')'};
  const shapes=MAP_DATA.features.map((f,n)=>'<path class="stateShape" tabindex="0" data-n="'+n+'" d="'+statePath(f)+'" fill="'+color(counts[f.properties.name]||0)+'"></path>').join('');
  const labels=MAP_DATA.features.map(f=>{let ax=Infinity,bx=-Infinity,ay=Infinity,by=-Infinity;walkCoords(f.geometry.coordinates,c=>{ax=Math.min(ax,c[0]);bx=Math.max(bx,c[0]);ay=Math.min(ay,c[1]);by=Math.max(by,c[1])});const q=project([(ax+bx)/2,(ay+by)/2]);return'<text class="stateLabel" x="'+q[0]+'" y="'+q[1]+'">'+f.properties['postal-code']+'</text>'}).join('');
- const visibleIds=new Set(rows.filter(p=>p.registry==='Verra').map(p=>String(p.id)));const geometries=(KML_DATA?.features||[]).filter(f=>visibleIds.has(String(f.properties.projectId))).map((f,n)=>{const id=f.properties.projectId,c=geometryCenter(f.geometry);return'<path class="projectGeometry" tabindex="0" data-id="'+id+'" data-n="'+n+'" d="'+geometryPath(f.geometry)+'"></path>'+(c?'<circle class="projectMarker" tabindex="0" data-id="'+id+'" cx="'+c[0].toFixed(1)+'" cy="'+c[1].toFixed(1)+'" r="5"></circle>':'')}).join('');
- $('brazilMap').innerHTML='<div class="mapTooltip" id="mapTooltip"></div><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa do Brasil com estados e limites de projetos ARR disponíveis na Verra">'+shapes+labels+'<g class="projectLayer">'+geometries+'</g></svg>';
+ const visibleIds=new Set(rows.filter(p=>p.registry==='Verra').map(p=>String(p.id))),source=DETAIL_DATA||KML_DATA;const geometries=(source?.features||[]).filter(f=>visibleIds.has(String(f.properties.projectId))).map((f,n)=>{const id=f.properties.projectId,c=geometryCenter(f.geometry);return'<path class="projectGeometry" tabindex="0" data-id="'+id+'" data-n="'+n+'" d="'+geometryPath(f.geometry)+'"></path>'+(c?'<circle class="projectMarker" tabindex="0" data-id="'+id+'" cx="'+c[0].toFixed(1)+'" cy="'+c[1].toFixed(1)+'" r="5"></circle>':'')}).join('');
+ $('brazilMap').innerHTML='<div class="mapTooltip" id="mapTooltip"></div><div class="mapControls"><button id="mapDetail" title="Carregar todos os vértices dos KML">Limites detalhados</button><button id="mapZoomIn" aria-label="Aproximar">+</button><button id="mapZoomOut" aria-label="Afastar">−</button><button id="mapReset" aria-label="Voltar à visão do Brasil">Brasil</button></div><div id="mapStatus" class="mapStatus">'+(DETAIL_DATA?'Limites detalhados ativos':'Visão geral — use o zoom para carregar os limites completos')+'</div><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa do Brasil com estados e limites de projetos ARR disponíveis na Verra"><g id="mapViewport" transform="translate('+MAP_VIEW.x+' '+MAP_VIEW.y+') scale('+MAP_VIEW.scale+')">'+shapes+labels+'<g class="projectLayer">'+geometries+'</g></g></svg>';
  const tip=$('mapTooltip'),mapEl=$('brazilMap'),show=(e,text)=>{tip.style.display='block';tip.textContent=text;const r=mapEl.getBoundingClientRect();tip.style.left=Math.min(e.clientX-r.left+12,r.width-240)+'px';tip.style.top=(e.clientY-r.top+12)+'px'};
  mapEl.querySelectorAll('.stateShape').forEach(el=>{const f=MAP_DATA.features[+el.dataset.n],name=f.properties.name,c=counts[name]||0;el.onmousemove=e=>show(e,name+': '+c+' projeto'+(c===1?'':'s'));el.onmouseleave=()=>tip.style.display='none';el.onclick=()=>applyDrill(name,p=>projectStates(p).includes(name));el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click()}}});
  mapEl.querySelectorAll('.projectGeometry,.projectMarker').forEach(el=>{const p=PROJECTS.find(x=>String(x.id)===el.dataset.id),label=p?(p.name+' · Verra '+p.id):('Projeto Verra '+el.dataset.id);el.onmousemove=e=>show(e,label);el.onmouseleave=()=>tip.style.display='none';el.onclick=e=>{e.stopPropagation();if(p)detail(p)};el.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&p){e.preventDefault();detail(p)}}});
+ attachZoom(mapEl,W,H);
  const shown=new Set((KML_DATA?.features||[]).filter(f=>visibleIds.has(String(f.properties.projectId))).map(f=>f.properties.projectId)).size;
  $('mapLegend').innerHTML='<span>Estados: 0</span><i style="background:#e6ece9"></i><i style="background:#b9dacb"></i><i style="background:#6eaa90"></i><i style="background:#1f7a59"></i><span>'+max+' projetos</span><b class="kmlKey"></b><span>'+shown+' projetos com geometria Verra</span>';
+}
+async function ensureDetails(){
+ if(DETAIL_DATA)return DETAIL_DATA;if(DETAIL_PROMISE)return DETAIL_PROMISE;
+ const status=$('mapStatus');if(status)status.textContent='Carregando e preparando os limites completos…';
+ DETAIL_PROMISE=fetch('verra-projects-detailed.geo.json.gz?v=17').then(async r=>{if(!r.ok)throw new Error('Falha ao carregar limites');if(typeof DecompressionStream!=='function')throw new Error('Navegador sem descompactação gzip');const stream=r.body.pipeThrough(new DecompressionStream('gzip'));return new Response(stream).json()}).then(data=>{DETAIL_DATA=data;renderMap(MAP_ROWS);return data}).catch(e=>{DETAIL_PROMISE=null;const s=$('mapStatus');if(s)s.textContent='Não foi possível carregar os limites detalhados.';throw e});
+ return DETAIL_PROMISE;
+}
+function attachZoom(mapEl,W,H){
+ const svg=mapEl.querySelector('svg'),viewport=mapEl.querySelector('#mapViewport');if(!svg||!viewport)return;
+ const update=()=>viewport.setAttribute('transform','translate('+MAP_VIEW.x+' '+MAP_VIEW.y+') scale('+MAP_VIEW.scale+')');
+ const zoomAt=async(factor,cx=W/2,cy=H/2)=>{try{await ensureDetails()}catch(e){return}const old=MAP_VIEW.scale,next=Math.max(1,Math.min(32,old*factor));MAP_VIEW.x=cx-(cx-MAP_VIEW.x)*(next/old);MAP_VIEW.y=cy-(cy-MAP_VIEW.y)*(next/old);MAP_VIEW.scale=next;update()};
+ $('mapDetail').onclick=()=>ensureDetails();$('mapZoomIn').onclick=()=>zoomAt(1.7);$('mapZoomOut').onclick=()=>zoomAt(1/1.7);$('mapReset').onclick=()=>{MAP_VIEW.scale=1;MAP_VIEW.x=0;MAP_VIEW.y=0;update()};
+ svg.addEventListener('wheel',e=>{e.preventDefault();const r=svg.getBoundingClientRect(),cx=(e.clientX-r.left)/r.width*W,cy=(e.clientY-r.top)/r.height*H;zoomAt(e.deltaY<0?1.35:1/1.35,cx,cy)},{passive:false});
+ let drag=null,moved=false;svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox:MAP_VIEW.x,oy:MAP_VIEW.y};moved=false;svg.setPointerCapture(e.pointerId)});svg.addEventListener('pointermove',e=>{if(!drag||MAP_VIEW.scale===1)return;const r=svg.getBoundingClientRect(),dx=(e.clientX-drag.x)/r.width*W,dy=(e.clientY-drag.y)/r.height*H;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;MAP_VIEW.x=drag.ox+dx;MAP_VIEW.y=drag.oy+dy;update()});svg.addEventListener('pointerup',()=>{drag=null});svg.addEventListener('pointercancel',()=>{drag=null});
 }
 window.updateMap=rows=>renderMap(rows);
 Promise.all([fetch('brazil-states.geo.json?v=11').then(r=>r.json()),fetch('verra-projects.geo.json?v=11').then(r=>r.json())]).then(([states,kml])=>{MAP_DATA=states;KML_DATA=kml;renderMap(MAP_ROWS)}).catch(()=>$('brazilMap').innerHTML='<p>Não foi possível carregar as camadas do mapa.</p>');

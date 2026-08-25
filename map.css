@@ -3,3 +3,12 @@
 .projectGeometry{fill:#ef7d32;fill-opacity:.28;stroke:#b84716;stroke-width:1.5;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill-opacity .15s,stroke-width .15s}.projectGeometry:hover,.projectGeometry:focus{fill-opacity:.58;stroke:#7d2608;stroke-width:2.5;outline:none}.projectLayer{isolation:isolate}.kmlKey{display:inline-block;width:28px;height:9px;background:#ef7d3270;border:2px solid #b84716;box-sizing:border-box}.mapLegend{flex-wrap:wrap}.mapNotice p{max-width:1050px}
 
 .projectMarker{fill:#ff7a22;stroke:#7d2608;stroke-width:2;vector-effect:non-scaling-stroke;cursor:pointer}.projectMarker:hover,.projectMarker:focus{fill:#ffd166;stroke-width:3;outline:none}.projectMarker{filter:drop-shadow(0 1px 2px #0007)}
+
+
+.mapControls{position:absolute;right:14px;top:14px;z-index:4;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mapControls button{border:1px solid #b9c9c1;background:#fff;color:#15332a;min-width:38px;height:36px;padding:0 10px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #0002}
+.mapControls button:hover,.mapControls button:focus{background:#eaf4ef;outline:2px solid #268361;outline-offset:1px}
+.mapStatus{position:absolute;left:14px;top:14px;z-index:3;background:#15332add;color:#fff;padding:7px 10px;font-size:11px;max-width:310px}
+.brazilMap svg{touch-action:none;cursor:grab}
+.brazilMap svg:active{cursor:grabbing}
+@media(max-width:680px){.mapControls{top:48px;left:10px;right:10px}.mapControls button{height:32px}.mapStatus{left:10px;top:10px}}
