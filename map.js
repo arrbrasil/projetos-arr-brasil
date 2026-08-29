@@ -32,8 +32,13 @@ function setupMapControls(){
  document.getElementById('layerLimits').onchange=e=>{if(e.target.checked){OVERVIEW_LAYER.addTo(ARR_MAP);OVERVIEW_LAYER.bringToBack()}else ARR_MAP.removeLayer(OVERVIEW_LAYER)};document.getElementById('layerMarkers').onchange=e=>e.target.checked?MARKER_LAYER.addTo(ARR_MAP):ARR_MAP.removeLayer(MARKER_LAYER);document.getElementById('layerBasemap').onchange=e=>e.target.checked?BASE_LAYER.addTo(ARR_MAP):ARR_MAP.removeLayer(BASE_LAYER);
  document.getElementById('brazilMap').addEventListener('click',event=>{const btn=event.target.closest('[data-project-detail]');if(btn){const p=projectById(btn.dataset.projectDetail);if(p)detail(p)}});
 }
+function refreshVisibleMap(){
+ if(!ARR_MAP)return;
+ setTimeout(()=>{ARR_MAP.invalidateSize(true);if(!ACTIVE_PROJECT_ID)ARR_MAP.fitBounds([[-34.2,-74.2],[5.5,-34.2]],{padding:[15,15],animate:false})},80);
+}
 async function initMap(){
  if(typeof L==='undefined'){setMapStatus('Não foi possível carregar o componente do mapa.','error');return}ARR_MAP=L.map('brazilMap',{zoomControl:true,preferCanvas:true,minZoom:3,maxZoom:19,worldCopyJump:false});BASE_LAYER=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(ARR_MAP);MARKER_LAYER=L.layerGroup().addTo(ARR_MAP);ARR_MAP.fitBounds([[-34.2,-74.2],[5.5,-34.2]],{padding:[15,15]});
- try{OVERVIEW_DATA=await fetch('verra-projects.geo.json?v=19').then(r=>{if(!r.ok)throw new Error();return r.json()});setupMapControls();rebuildOverview(PROJECTS)}catch(_error){setMapStatus('Não foi possível carregar as geometrias dos projetos.','error')}
+ try{OVERVIEW_DATA=await fetch('verra-projects.geo.json?v=21').then(r=>{if(!r.ok)throw new Error();return r.json()});setupMapControls();rebuildOverview(PROJECTS)}catch(_error){setMapStatus('Não foi possível carregar as geometrias dos projetos.','error')}
+ const locationTab=document.querySelector('[data-tab="localizacao"]');if(locationTab)locationTab.addEventListener('click',refreshVisibleMap);
 }
-window.updateMap=rows=>rebuildOverview(rows);window.addEventListener('DOMContentLoaded',initMap);
+window.updateMap=rows=>rebuildOverview(rows);window.refreshArrMap=refreshVisibleMap;window.addEventListener('DOMContentLoaded',initMap);
