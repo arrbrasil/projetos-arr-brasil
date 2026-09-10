@@ -19,7 +19,7 @@ function popupHtml(id){const p=projectById(id);if(!p)return `<strong>Projeto Ver
 function bindBoundaryFeature(feature,layer){const id=featureId(feature);layer.bindTooltip(projectLabel(id),{sticky:true,direction:'top'});layer.bindPopup(popupHtml(id),{maxWidth:320})}
 function makeMarker(feature){
  const id=featureId(feature),coordinates=feature?.geometry?.coordinates;if(!id||!Array.isArray(coordinates))return null;
- const marker=L.circleMarker([coordinates[1],coordinates[0]],{radius:7,color:'#7d2608',weight:2,fillColor:'#ff7a22',fillOpacity:.96,renderer:L.canvas()});
+ const marker=L.circleMarker([coordinates[1],coordinates[0]],{radius:7,color:'#7d2608',weight:2,fillColor:'#ff7a22',fillOpacity:.96});
  marker.bindTooltip(projectLabel(id),{sticky:true,direction:'top'}).bindPopup(popupHtml(id),{maxWidth:320});marker.on('click',()=>selectMapProject(id,true));return marker;
 }
 function rebuildOverview(rows=PROJECTS){
