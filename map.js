@@ -41,7 +41,7 @@ async function selectMapProject(id,loadExact=true){
   const pointClass=featureClass(point),confirmed=pointClass==='confirmed';SELECTED_LAYER=L.geoJSON(selected,{renderer:L.canvas({padding:.8}),style:{color:confirmed?'#8f2f0b':'#174d73',weight:3,opacity:1,fillColor:confirmed?'#ff9a55':'#65b5df',fillOpacity:.18},onEachFeature:bindBoundaryFeature});
   const toggle=document.getElementById(confirmed?'layerConfirmed':'layerOther');if(toggle?.checked!==false)SELECTED_LAYER.addTo(ARR_MAP);
   const bounds=SELECTED_LAYER.getBounds();if(bounds.isValid())ARR_MAP.fitBounds(bounds.pad(.12),{maxZoom:18,animate:true});
-  setMapStatus(`${confirmed?'Limite confirmado':'Outra geometria Verra'} ativa: ${projectLabel(ACTIVE_PROJECT_ID)}`,'active');
+  setMapStatus(`${confirmed?'Limite confirmado ativo':'Outra geometria Verra ativa'}: ${projectLabel(ACTIVE_PROJECT_ID)}`,'active');
  }catch(_error){setMapStatus(`Não foi possível carregar a geometria do projeto ${id}.`,'error')}
 }
 function clearMapSelection(fit=true){
