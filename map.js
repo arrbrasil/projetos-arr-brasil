@@ -1,8 +1,8 @@
 let ARR_MAP=null,OVERVIEW_DATA=null,SELECTED_LAYER=null,CONFIRMED_MARKERS=null,OTHER_MARKERS=null,BASE_LAYER=null,ACTIVE_PROJECT_ID='';
 const DETAIL_CACHE=new Map();
-const MAP_PROJECTS=()=>PROJECTS.filter(p=>p.registry==='Verra');
+const MAP_PROJECTS=()=>PROJECTS;
 function mapEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function projectById(id){return PROJECTS.find(p=>p.registry==='Verra'&&String(p.id)===String(id))}
+function projectById(id){return PROJECTS.find(p=>String(p.id)===String(id))}
 function featureId(feature){return String(feature?.properties?.projectId||'')}
 function featureClass(feature){return feature?.properties?.geometryClass==='confirmed'?'confirmed':'other'}
 function geometryProjects(data){return new Set((data?.features||[]).map(featureId).filter(Boolean))}
@@ -17,12 +17,12 @@ async function loadBoundary(id){
  const request=Promise.all(files.map(file=>fetchGzipJson(`${file}?v=25`))).then(parts=>({type:'FeatureCollection',features:parts.flatMap(part=>part.features||[])})).catch(error=>{DETAIL_CACHE.delete(key);throw error});
  DETAIL_CACHE.set(key,request);return request;
 }
-function popupHtml(id){const p=projectById(id),f=OVERVIEW_DATA?.features?.find(x=>featureId(x)===String(id)),confirmed=featureClass(f)==='confirmed',files=f?.properties?.sourceFiles||[];if(!p)return `<strong>Projeto Verra ${mapEsc(id)}</strong>`;return `<div class="projectPopup"><small>VERRA ${mapEsc(p.id)} · ${confirmed?'LIMITE CONFIRMADO':'OUTRA GEOMETRIA'}</small><strong>${mapEsc(p.name)}</strong><span>${mapEsc(p.idesamState||p.state||'Localização não informada')}</span><span><b>Arquivo original:</b> ${mapEsc(files.join('; ')||'não informado')}</span><span>Clique no ponto para carregar a geometria.</span><button type="button" data-project-detail="${mapEsc(p.id)}">Abrir ficha do projeto</button></div>`}
+function popupHtml(id){const p=projectById(id),f=OVERVIEW_DATA?.features?.find(x=>featureId(x)===String(id)),confirmed=featureClass(f)==='confirmed',files=f?.properties?.sourceFiles||[];if(!p)return `<strong>Projeto Verra ${mapEsc(id)}</strong>`;return `<div class="projectPopup"><small>${mapEsc(p.registry.toUpperCase())} ${mapEsc(p.id)} · ${confirmed?'LIMITE CONFIRMADO':'OUTRA GEOMETRIA'}</small><strong>${mapEsc(p.name)}</strong><span><b>Localização:</b> ${mapEsc(p.municipality?[p.municipality,p.idesamState||p.state].filter(Boolean).join(' — '):p.idesamState||p.state||'não informada')}</span><span><b>Arquivo original:</b> ${mapEsc(files.join('; ')||'não informado')}</span><div class="projectPopupActions"><button type="button" data-project-detail="${mapEsc(p.id)}">Ver detalhes no painel</button>${p.url?`<a href="${mapEsc(p.url)}" target="_blank" rel="noreferrer">Abrir projeto na ${mapEsc(p.registry)} ↗</a>`:''}</div></div>`}
 function bindBoundaryFeature(feature,layer){const id=featureId(feature);layer.bindTooltip(projectLabel(id),{sticky:true,direction:'top'});layer.bindPopup(popupHtml(id),{maxWidth:320})}
 function makeMarker(feature){
  const id=featureId(feature),coordinates=feature?.geometry?.coordinates,confirmed=featureClass(feature)==='confirmed';if(!id||!Array.isArray(coordinates))return null;
  const marker=L.circleMarker([coordinates[1],coordinates[0]],{radius:7,color:confirmed?'#7d2608':'#174d73',weight:2,fillColor:confirmed?'#ff7a22':'#3e93c7',fillOpacity:.96});
- marker.bindTooltip(projectLabel(id),{sticky:true,direction:'top'}).bindPopup(popupHtml(id),{maxWidth:320});marker.on('click',()=>selectMapProject(id,true));return marker;
+ marker.bindTooltip(projectLabel(id),{sticky:true,direction:'top'}).bindPopup(popupHtml(id),{maxWidth:360});marker.on('click',async()=>{await selectMapProject(id,true);marker.openPopup()});return marker;
 }
 function rebuildOverview(rows=PROJECTS){
  if(!ARR_MAP||!OVERVIEW_DATA)return;
